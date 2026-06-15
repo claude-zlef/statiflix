@@ -39,8 +39,8 @@
     app.appendChild(el('div', { class: 'kpis' }, [
       kpi(t('stat.hours'), stats.totals.hours.toLocaleString(), t('stat.hours_unit'), true),
       kpi(t('stat.titles'), stats.totals.titles.toLocaleString()),
-      kpi(t('stat.rewatched'), stats.totals.rewatchedTitles.toLocaleString(), t('stat.titles_unit')),
-      kpi(t('stat.abandoned'), stats.totals.abandoned.toLocaleString(), t('stat.shows_unit')),
+      kpi(t('stat.episodes'), stats.totals.episodes.toLocaleString()),
+      kpi(t('stat.abandoned'), stats.totals.abandoned.toLocaleString(), t('stat.titles_unit')),
     ]));
 
     const head = (title, hint) => el('div', { class: 'card-head' }, [el('h3', { text: title }), hint ? el('span', { class: 'hint', text: hint }) : null]);
@@ -58,19 +58,21 @@
     const gr = genreRows(stats);
     if (gr.length) app.appendChild(el('div', { class: 'card' }, [head(t('sec.genres')), R.donut(gr, String(gr.length), t('sec.genres'))]));
 
-    // Rewatched
-    if (stats.rewatched.length) app.appendChild(el('div', { class: 'card' }, [
-      head(t('sec.rewatched')),
-      R.rankList(stats.rewatched.slice(0, 8), {
-        sub: (it) => it.isEpisode ? t('label.episodes_n', { n: it.distinctEpisodes }) : R.fmtHours(it.hours),
-        value: (it) => t('label.times_n', { n: it.rewatchScore + 1 }),
+    // Abandoned (real signals: % watched for movies, N of M episodes for series)
+    if (stats.abandonedList.length) app.appendChild(el('div', { class: 'card' }, [
+      head(t('sec.abandoned'), t('sec.abandoned_sub')),
+      R.rankList(stats.abandonedList.slice(0, 10), {
+        rank: false,
+        sub: (it) => it.isEpisode ? t('label.eps_of', { n: it.distinctEpisodes, total: it.episodeCount }) : t('label.pct_watched', { pct: it.pct != null ? it.pct : 0 }),
+        value: (it) => R.fmtHours(it.hours),
       }),
     ]));
 
-    // Abandoned
-    if (stats.abandonedList.length) app.appendChild(el('div', { class: 'card' }, [
-      head(t('sec.abandoned')),
-      R.rankList(stats.abandonedList.slice(0, 8), { rank: false, sub: (it) => t('label.quit_after', { ep: t('label.ep_n', { n: it.distinctEpisodes }) }) }),
+    // Across the year (month bars)
+    const months = t('months.short').split(',');
+    app.appendChild(el('div', { class: 'card' }, [
+      head(t('sec.bymonth')),
+      R.bars(stats.byMonth.map((v, i) => ({ label: months[i], value: v })), { fmt: (v) => R.fmtHours(v) }),
     ]));
 
     // By weekday
@@ -95,7 +97,7 @@
 
   function genreRows(stats) {
     const counts = {}; const seen = new Set();
-    stats.top.concat(stats.rewatched).forEach((it) => {
+    stats.top.concat(stats.abandonedList).forEach((it) => {
       if (seen.has(it.key)) return; seen.add(it.key);
       if (it.genres && it.genres.length) counts[it.genres[0]] = (counts[it.genres[0]] || 0) + Math.max(1, it.hours || 1);
     });

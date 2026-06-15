@@ -127,7 +127,19 @@ body {
 .stx-bars { display: flex; flex-direction: column; gap: 12px; }
 .stx-bar-top { display: flex; justify-content: space-between; font-size: 12.5px; margin-bottom: 5px; }
 .stx-bar-track { height: 7px; background: #23232b; border-radius: 4px; overflow: hidden; }
-.stx-bar-fill { height: 7px; background: linear-gradient(90deg, var(--red-dim), var(--red)); border-radius: 4px; }
+.stx-bar-fill { height: 7px; background: linear-gradient(90deg, var(--red-dim), var(--red)); border-radius: 4px; transition: filter .12s; }
+.stx-bar.clickable { cursor: pointer; padding: 4px 6px; margin: -4px -6px; border-radius: 8px; transition: background .12s; }
+.stx-bar.clickable:hover { background: #1d1d24; }
+.stx-bar.clickable:hover .stx-bar-fill { filter: brightness(1.25); }
+
+/* Year nav (across-the-year widget) */
+.yearnav { display: flex; align-items: center; gap: 6px; }
+.ynav { background: #23232b; border: 1px solid var(--line); color: #fff; border-radius: 7px; width: 28px; height: 28px; cursor: pointer; font-size: 16px; line-height: 1; }
+.ynav:hover:not(:disabled) { background: #30303a; }
+.ynav:disabled { opacity: .35; cursor: default; }
+.ynav-lbl { font-size: 13.5px; color: var(--muted); min-width: 64px; text-align: center; font-weight: 600; }
+.drill-back { background: none; border: none; color: var(--red); font-size: 20px; cursor: pointer; margin-right: 8px; vertical-align: -2px; }
+.drill-back:hover { filter: brightness(1.2); }
 
 /* Donut */
 .stx-donut-wrap { display: flex; align-items: center; gap: 20px; }

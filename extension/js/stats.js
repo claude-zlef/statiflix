@@ -79,7 +79,7 @@
           key, title: it.title, isEpisode: it.isEpisode,
           hours: 0, sessions: 0, episodeViews: 0,
           episodes: new Set(), days: new Set(), lastDate: 0, firstDate: Infinity,
-          poster: null, genres: null,
+          rt: null, bm: 0, poster: null, genres: null,
         };
       }
       agg.hours += h;
@@ -87,6 +87,8 @@
       agg.days.add(dk);
       if (it.date > agg.lastDate) agg.lastDate = it.date;
       if (it.date < agg.firstDate) agg.firstDate = it.date;
+      if (it.runtime && (!agg.rt || it.runtime > agg.rt)) agg.rt = it.runtime;
+      if (it.bookmark && it.bookmark > agg.bm) agg.bm = it.bookmark;
       if (it.isEpisode) {
         agg.episodeViews++;
         if (it.id) agg.episodes.add(it.id);
@@ -103,22 +105,15 @@
     s.peak.hour = s.byHour.indexOf(Math.max(...s.byHour));
     s.peak.day = s.byDay.indexOf(Math.max(...s.byDay));
 
-    // Finalize titles.
-    const arr = Object.values(titles).map((a) => {
-      const distinctEps = a.episodes.size;
-      // rewatch score: for series = episode re-views (extra plays of same ep);
-      // for movies = extra days beyond the first.
-      const rewatchScore = a.isEpisode
-        ? Math.max(0, a.episodeViews - distinctEps)
-        : Math.max(0, a.days.size - 1);
-      return {
-        key: a.key, title: a.title, isEpisode: a.isEpisode,
-        hours: a.hours, sessions: a.sessions,
-        distinctEpisodes: distinctEps, episodeViews: a.episodeViews,
-        days: a.days.size, lastDate: a.lastDate, firstDate: a.firstDate,
-        rewatchScore,
-      };
-    });
+    // Finalize titles. (Netflix exposes no reliable per-play history, so rewatch
+    // counts can't be computed accurately — that feature is intentionally dropped.)
+    const arr = Object.values(titles).map((a) => ({
+      key: a.key, title: a.title, isEpisode: a.isEpisode,
+      hours: a.hours, sessions: a.sessions,
+      distinctEpisodes: a.episodes.size, episodeViews: a.episodeViews,
+      days: a.days.size, lastDate: a.lastDate, firstDate: a.firstDate,
+      rt: a.rt, bm: a.bm,
+    }));
 
     s.totals.titles = arr.length;
     s.totals.episodes = arr.reduce((n, a) => n + a.episodeViews, 0);
@@ -127,17 +122,34 @@
     // Top by hours.
     s.top = arr.slice().sort((a, b) => b.hours - a.hours).slice(0, 24);
 
-    // Rewatched.
-    const rew = arr.filter((a) => a.rewatchScore > 0).sort((a, b) => b.rewatchScore - a.rewatchScore);
-    s.rewatched = rew.slice(0, 24);
-    s.totals.rewatchedTitles = rew.length;
+    // Rewatch feature disabled (unreliable from Netflix data).
+    s.rewatched = [];
+    s.totals.rewatchedTitles = 0;
 
-    // Abandoned: series, ≤2 distinct eps, dormant > 45d.
+    // Abandoned — started but never finished, and dormant. Uses real signals:
+    //  • Movies: a resume bookmark well short of the runtime (<85%).
+    //  • Series: watched fewer than half the episodes and never the whole show.
+    //    Requires Netflix's episodeCount (passed via opts.meta) so we don't flag a
+    //    show as "abandoned" when later episodes were actually watched.
+    const meta = opts.meta || {};
     const now = Date.now();
-    const ab = arr.filter((a) =>
-      a.isEpisode && a.distinctEpisodes > 0 && a.distinctEpisodes <= 2 &&
-      (now - a.lastDate) > ABANDON_GAP_DAYS * DAY_MS
-    ).sort((a, b) => a.distinctEpisodes - b.distinctEpisodes || b.lastDate - a.lastDate);
+    const ab = [];
+    for (const a of arr) {
+      if ((now - a.lastDate) <= ABANDON_GAP_DAYS * DAY_MS) continue; // still recent
+      if (a.isEpisode) {
+        const ec = meta[a.key.slice(1)] && meta[a.key.slice(1)].episodeCount;
+        if (!ec || a.distinctEpisodes >= ec) continue;             // unknown total / finished
+        const completion = a.distinctEpisodes / ec;
+        if (completion >= 0.5) continue;                            // got more than halfway
+        ab.push(Object.assign({}, a, { kind: 'series', episodeCount: ec, completion }));
+      } else {
+        if (!a.rt || !a.bm || a.bm <= 0) continue;                 // no progress signal
+        const frac = a.bm / a.rt;
+        if (frac >= 0.85) continue;                                // basically finished
+        ab.push(Object.assign({}, a, { kind: 'movie', pct: Math.round(frac * 100), watchedSec: a.bm, runtime: a.rt }));
+      }
+    }
+    ab.sort((x, y) => y.lastDate - x.lastDate);
     s.abandonedList = ab.slice(0, 24);
     s.totals.abandoned = ab.length;
 
@@ -173,7 +185,6 @@
     // Round hours for transport.
     s.totals.hours = Math.round(s.totals.hours);
     s.top.forEach((a) => (a.hours = Math.round(a.hours * 10) / 10));
-    s.rewatched.forEach((a) => (a.hours = Math.round(a.hours * 10) / 10));
     if (s.binge) { s.binge.hours = Math.round(s.binge.hours * 10) / 10; s.binge.titles.forEach((t) => (t.hours = Math.round(t.hours * 10) / 10)); }
 
     return s;

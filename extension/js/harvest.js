@@ -141,6 +141,9 @@
           logo: (js.logoImage && js.logoImage.url) || null,
           genres: (js.genres || []).map((g) => g && g.name).filter(Boolean).slice(0, 3),
           year: js.releaseYear || null,
+          type: js.type || null,
+          episodeCount: typeof js.episodeCount === 'number' ? js.episodeCount : null,
+          seasonCount: typeof js.seasonCount === 'number' ? js.seasonCount : null,
         };
       }
       artDone += chunk.length; report('art', Math.min(artDone, displayIds.length), displayIds.length);
@@ -179,7 +182,8 @@
         id: x.id, seriesId: x.series || null,
         title: isEpisode ? (x.seriesTitle || (x.title || '').split(/:\s/)[0] || 'Unknown') : (x.title || 'Unknown'),
         episodeTitle: isEpisode ? (x.episodeTitle || x.title || '') : '',
-        isEpisode, date: x.date, duration: watchedSeconds(x.rt, x.bm, isEpisode), bookmark: x.bm || 0,
+        isEpisode, date: x.date, duration: watchedSeconds(x.rt, x.bm, isEpisode),
+        bookmark: x.bm || 0, runtime: x.rt || null,
       };
     }).filter((i) => i.date);
   }

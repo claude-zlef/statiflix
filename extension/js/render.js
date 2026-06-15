@@ -88,7 +88,7 @@
     const wrap = el('div', { class: 'stx-bars' });
     rows.forEach((r) => {
       const pct = Math.max(2, Math.round((r.value / max) * 100));
-      wrap.appendChild(el('div', { class: 'stx-bar' }, [
+      const bar = el('div', { class: 'stx-bar' + (opts.onClick ? ' clickable' : '') }, [
         el('div', { class: 'stx-bar-top' }, [
           el('span', { text: r.label }),
           el('span', { class: 'stx-muted', text: opts.fmt ? opts.fmt(r.value) : String(r.value) }),
@@ -96,7 +96,9 @@
         el('div', { class: 'stx-bar-track' }, [
           el('div', { class: 'stx-bar-fill', style: `width:${pct}%` }),
         ]),
-      ]));
+      ]);
+      if (opts.onClick) bar.addEventListener('click', () => opts.onClick(r));
+      wrap.appendChild(bar);
     });
     return wrap;
   }
