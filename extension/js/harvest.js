@@ -70,6 +70,17 @@
       const j = await r.json();
       return (j.jsonGraph && j.jsonGraph.videos) || {};
     }
+    // Real artwork + genres straight from Netflix (jawSummary): backgroundImage is
+    // the landscape banner, logoImage the title logo, genres the localized genres.
+    async function artChunk(ids) {
+      const url = 'https://www.netflix.com/nq/website/memberapi/release/pathEvaluator' +
+        '?webp=true&falcor_server=0.1.0&withSize=true&materialize=true&original_path=%2Fshakti%2F' + build + '%2FpathEvaluator';
+      const body = 'authURL=' + encodeURIComponent(authURL) + '&path=' + encodeURIComponent(JSON.stringify(['videos', ids, 'jawSummary']));
+      const r = await fetch(url, { method: 'POST', credentials: 'include', headers: metaHeaders, body });
+      if (!r.ok) throw new Error('art HTTP ' + r.status);
+      const j = await r.json();
+      return (j.jsonGraph && j.jsonGraph.videos) || {};
+    }
     async function withRetry(fn, tries = 3) {
       for (let a = 0; a < tries; a++) { try { return await fn(); } catch (e) { if (a === tries - 1) throw e; await sleep(300 * (a + 1)); } }
     }
@@ -114,7 +125,28 @@
       metaDone += chunk.length; report('meta', Math.min(metaDone, ids.length), ids.length);
     });
 
-    // 3. assemble raw items
+    // 3. artwork + genres per unique display title (series for episodes, movie id else)
+    const displayIds = [...new Set(all.map((x) => (x.series != null ? x.series : x.movieID)))];
+    const art = {};
+    const artChunks = [];
+    for (let i = 0; i < displayIds.length; i += 48) artChunks.push(displayIds.slice(i, i + 48));
+    let artDone = 0;
+    await runPool(artChunks, 6, async (chunk) => {
+      let v = {}; try { v = await withRetry(() => artChunk(chunk)); } catch (e) {}
+      for (const id of chunk) {
+        const js = v[id] && v[id].jawSummary && v[id].jawSummary.value;
+        if (!js) continue;
+        art[id] = {
+          banner: (js.backgroundImage && js.backgroundImage.url) || null,
+          logo: (js.logoImage && js.logoImage.url) || null,
+          genres: (js.genres || []).map((g) => g && g.name).filter(Boolean).slice(0, 3),
+          year: js.releaseYear || null,
+        };
+      }
+      artDone += chunk.length; report('art', Math.min(artDone, displayIds.length), displayIds.length);
+    });
+
+    // 4. assemble raw items
     const items = all.map((x) => {
       const mv = meta[x.movieID] || {};
       return {
@@ -124,7 +156,7 @@
       };
     });
     report('done', items.length, items.length);
-    return { items, profileName, vhSize };
+    return { items, profileName, vhSize, art };
   }
 
   // ---- normal-world helpers ----
@@ -187,7 +219,7 @@
       const result = injection && injection[0] && injection[0].result;
       if (!result) throw { code: 'UNKNOWN' };
       if (result.error) throw { code: result.error };
-      return { items: toStatsItems(result.items), profileName: result.profileName, fetchedAt: Date.now() };
+      return { items: toStatsItems(result.items), profileName: result.profileName, art: result.art || {}, fetchedAt: Date.now() };
     } finally {
       if (poll) clearInterval(poll);
       try { await chrome.tabs.remove(tab.id); } catch (e) {}

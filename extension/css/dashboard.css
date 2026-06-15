@@ -87,20 +87,20 @@ body {
 .card-head .more:hover { text-decoration: underline; }
 .stx-muted { color: var(--muted); }
 
-/* Posters */
-.stx-poster { border-radius: 7px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; position: relative; }
-.stx-poster-ini { font-weight: 800; color: rgba(255,255,255,.82); font-size: 15px; letter-spacing: .5px; }
-.stx-poster-sm { width: 38px; height: 56px; }
-.stx-poster-sm .stx-poster-ini { font-size: 12px; }
-.stx-poster-md { width: 80px; height: 118px; }
-.stx-poster-rail { width: 116px; height: 172px; }
-.stx-poster-rail .stx-poster-ini { font-size: 22px; }
+/* Posters — real Netflix landscape banners (gradient fallback) */
+.stx-poster { border-radius: 7px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; position: relative; overflow: hidden; background-size: cover; background-position: center; }
+.stx-poster-ini { font-weight: 800; color: rgba(255,255,255,.85); font-size: 16px; letter-spacing: .5px; }
+.stx-poster-sm { width: 64px; height: 36px; }
+.stx-poster-sm .stx-poster-ini { font-size: 11px; }
+.stx-poster-md { width: 142px; height: 80px; }
+.stx-poster-rail { width: 224px; height: 126px; }
+.stx-poster-rail .stx-poster-ini { font-size: 24px; }
 
 /* Rail */
 .stx-rail { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 6px; scrollbar-width: thin; }
 .stx-rail::-webkit-scrollbar { height: 8px; }
 .stx-rail::-webkit-scrollbar-thumb { background: #2c2c36; border-radius: 4px; }
-.stx-rail-item { width: 116px; flex-shrink: 0; }
+.stx-rail-item { width: 224px; flex-shrink: 0; }
 .stx-rail-title { font-size: 12.5px; font-weight: 600; margin-top: 8px; line-height: 1.25; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .stx-rail-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
 .stx-badge-wrap { position: relative; }

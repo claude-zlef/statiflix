@@ -14,19 +14,24 @@
 
   function load() { return new Promise((res) => chrome.storage.local.get([DATA_KEY], (o) => res(o[DATA_KEY] || null))); }
 
-  /* ---------- enrichment ---------- */
-  function applyEnrichment(s) {
-    const tag = (it) => { const e = enrichMap[it.title]; if (e) { it.poster = e.poster; it.genres = e.genres; } return it; };
+  /* ---------- decorate with real Netflix art + genres (TMDB as fallback) ---------- */
+  function artFor(key) { const a = (raw && raw.art) || {}; return a[key.slice(1)] || null; } // key 's<id>'|'m<id>'
+  function decorate(s) {
+    const tag = (it) => {
+      const na = artFor(it.key), tm = enrichMap[it.title];
+      it.poster = (na && na.banner) || (tm && tm.poster) || null;
+      it.genres = (na && na.genres && na.genres.length ? na.genres : (tm && tm.genres)) || null;
+      return it;
+    };
     s.top.forEach(tag); s.rewatched.forEach(tag); s.abandonedList.forEach(tag);
     if (s.binge) s.binge.titles.forEach(tag);
   }
   function genreRows(s) {
     const counts = {};
-    const all = s.top.concat(s.rewatched);
     const seen = new Set();
-    all.forEach((it) => {
+    s.top.concat(s.rewatched).forEach((it) => {
       if (seen.has(it.key)) return; seen.add(it.key);
-      const g = enrichMap[it.title] && enrichMap[it.title].genres;
+      const g = it.genres || (artFor(it.key) && artFor(it.key).genres) || (enrichMap[it.title] && enrichMap[it.title].genres);
       if (g && g.length) counts[g[0]] = (counts[g[0]] || 0) + Math.max(1, it.hours || 1);
     });
     return Object.entries(counts).map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value).slice(0, 6);
@@ -56,7 +61,7 @@
   function hod(h) { return h === 0 ? '12am' : h < 12 ? h + 'am' : h === 12 ? '12pm' : (h - 12) + 'pm'; }
 
   function render() {
-    applyEnrichment(stats);
+    decorate(stats);
     const app = $('app');
     app.textContent = '';
     if (stats.empty) { $('empty').classList.remove('hidden'); app.classList.add('hidden'); return; }
@@ -287,11 +292,12 @@
     $('loadSub').textContent = '';
     try {
       const res = await window.STX_HARVEST.run((phase, done, total) => {
-        if (phase === 'history') { $('loadMsg').textContent = t('load.history', { done, total }); $('loadBar').style.width = (total ? Math.min(70, (done / total) * 70) : 5) + '%'; }
-        else if (phase === 'meta') { $('loadMsg').textContent = t('load.meta', { done, total }); $('loadBar').style.width = (70 + (total ? (done / total) * 30 : 0)) + '%'; }
+        if (phase === 'history') { $('loadMsg').textContent = t('load.history', { done, total }); $('loadBar').style.width = (total ? Math.min(50, (done / total) * 50) : 5) + '%'; }
+        else if (phase === 'meta') { $('loadMsg').textContent = t('load.meta', { done, total }); $('loadBar').style.width = (50 + (total ? (done / total) * 25 : 0)) + '%'; }
+        else if (phase === 'art') { $('loadMsg').textContent = t('load.art', { done, total }); $('loadBar').style.width = (75 + (total ? (done / total) * 25 : 0)) + '%'; }
         else if (phase === 'done') { $('loadBar').style.width = '100%'; }
       });
-      raw = { items: res.items, profileName: res.profileName, fetchedAt: res.fetchedAt };
+      raw = { items: res.items, profileName: res.profileName, art: res.art || {}, fetchedAt: res.fetchedAt };
       await chrome.storage.local.set({ [DATA_KEY]: raw });
       boot();
     } catch (e) {

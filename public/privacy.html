@@ -53,8 +53,8 @@
     <h2>Optional: mobile sync</h2>
     <p>If you choose to open your stats on your phone, the extension encrypts a snapshot with a key generated on your device (AES-256-GCM). Only the resulting <strong>ciphertext</strong> is uploaded to our relay, under a random ID, and auto-deletes after 24 hours. The decryption key travels <strong>only inside the QR code / URL fragment</strong> — it is never sent to the server, so the relay cannot read what it stores.</p>
 
-    <h2>Optional: genre &amp; cover enrichment</h2>
-    <p>If enabled, the extension sends <strong>only title names</strong> (no identity, no dates, no watch data) to our server, which looks them up in TMDB to add genres and poster art. Results are cached. This feature is off unless the lookup service is available, and it never transmits anything that identifies you.</p>
+    <h2>Show artwork &amp; genres</h2>
+    <p>Banner art and genres are read from <strong>Netflix's own API, in your own session</strong>, at the same time as your history — nothing extra is sent anywhere. As an optional fallback, if a title has no Netflix artwork the extension can look it up by <strong>title name only</strong> (no identity, no watch data) via our TMDB proxy; this is off unless that service is available. Titles with no artwork simply show a coloured placeholder.</p>
 
     <h2>Open source</h2>
     <p>Every line is auditable on <a href="https://github.com/claude-zlef/statiflix" target="_blank" rel="noopener">GitHub</a>. Statiflix is not affiliated with, or endorsed by, Netflix.</p>
