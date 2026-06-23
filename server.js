@@ -10,6 +10,8 @@ const fs = require('fs');
 const path = require('path');
 const { createRelay } = require('./lib/relay');
 const { createTmdb } = require('./lib/tmdb');
+const seohead = require('./seohead');
+seohead.start('statiflix');
 
 const PORT = Number(process.env.PORT || 10047);
 const ROOT = path.join(__dirname, 'public');
@@ -99,6 +101,13 @@ const server = http.createServer((req, res) => {
       const ext = path.extname(file).toLowerCase();
       const type = MIME[ext] || 'application/octet-stream';
       const cache = ext === '.html' || ext === '.webmanifest' ? 'no-cache' : 'public, max-age=3600';
+      // Only the canonical landing page consumes the managed SEO; /app/ and
+      // /privacy keep their own (noindex) heads.
+      if (p === '/index.html') {
+        const body = Buffer.from(seohead.inject(fs.readFileSync(file)));
+        res.writeHead(200, { 'content-type': type, 'cache-control': cache, 'content-length': body.length });
+        return res.end(body);
+      }
       const headers = { 'content-type': type, 'cache-control': cache, 'content-length': st.size };
       if (ext === '.zip') headers['content-disposition'] = 'attachment; filename="statiflix.zip"';
       res.writeHead(200, headers);
