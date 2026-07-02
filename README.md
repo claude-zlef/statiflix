@@ -1,5 +1,7 @@
 # Statiflix — Your Netflix Viewing, Quantified
 
+![views](https://assets.zlef.fr/badge/views/zlef-fr/statiflix.svg)
+
 A free, open-source Chrome extension that turns your Netflix watch history into a
 private, *Spotify-Wrapped*-style dashboard — rewatches, abandoned shows, genre
 breakdowns, and a day×hour heatmap of when you actually binge. With an optional
